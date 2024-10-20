@@ -44,7 +44,7 @@ public class QueueProcessorService {
         }
     }
 
-    private String processItem(List<ProcessingRequest> requests) {
+    String processItem(List<ProcessingRequest> requests) {
         // Simulate processing all requests
         for (ProcessingRequest request : requests) {
             String result = "Processed: " + request.getData();
