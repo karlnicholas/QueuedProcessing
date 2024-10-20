@@ -1,6 +1,8 @@
 package org.example.queuedprocessing;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.ContextClosedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -10,6 +12,7 @@ import java.util.List;
 public class SyncProcessor {
 
     private final AsyncService asyncService;
+    private volatile boolean running = true;
 
     @Autowired
     public SyncProcessor(AsyncService asyncService) {
@@ -18,7 +21,7 @@ public class SyncProcessor {
 
     public void processItems() {
         try {
-            while (true) {
+            while (running) {
                 // Take the first item (blocks until at least one is available)
                 ProcessingRequest initialRequest = asyncService.getRequestQueue().take();
 
@@ -41,5 +44,10 @@ public class SyncProcessor {
     private String processItem(String data) {
         // Simulate processing
         return "Processed: " + data;
+    }
+
+    @EventListener(ContextClosedEvent.class)
+    public void onApplicationShutdown() {
+        running = false; // Set running to false to stop the loop
     }
 }
