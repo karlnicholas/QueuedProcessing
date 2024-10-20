@@ -18,7 +18,7 @@ public class ProcessingRequestListener {
         this.submitToQueueService = submitToQueueService;
     }
 
-    @JmsListener(destination = "processing-requests-queue", concurrency = "4")
+    @JmsListener(destination = "processing-requests-queue")
     public void receiveAndProcessRequest(ProcessingRequest request) {
         // Submit the request to the queue for processing
         submitToQueueService.submitItem(request);
