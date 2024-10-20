@@ -8,12 +8,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class QueueProcessorService {
 
     private final SubmitToQueueService submitToQueueService;
     private volatile boolean running = true;
+    private static final int BATCH_SIZE = 4; // Number of messages to process at once
 
     @Autowired
     public QueueProcessorService(SubmitToQueueService submitToQueueService) {
@@ -28,16 +30,19 @@ public class QueueProcessorService {
     public void processItems() {
         try {
             while (running) {
-                // Take the first item (blocks until at least one is available)
-                ProcessingRequest initialRequest = submitToQueueService.getRequestQueue().take();
-
-                // Collect any additional available items from the queue
                 List<ProcessingRequest> requests = new ArrayList<>();
-                requests.add(initialRequest);
-                submitToQueueService.getRequestQueue().drainTo(requests); // Drains all available items into the list
+                // Use poll with a timeout to ensure that we don't block indefinitely
+                ProcessingRequest initialRequest = submitToQueueService.getRequestQueue().poll(5, TimeUnit.SECONDS);
 
-                // Process all collected items at once
-                processItem(requests);
+                if (initialRequest != null) {
+                    requests.add(initialRequest);
+                    submitToQueueService.getRequestQueue().drainTo(requests, BATCH_SIZE - 1);
+                }
+
+                // If we have any requests, process them
+                if (!requests.isEmpty()) {
+                    processItem(requests);
+                }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt(); // Restore interrupted status
@@ -58,4 +63,3 @@ public class QueueProcessorService {
         running = false; // Set running to false to stop the loop
     }
 }
-
