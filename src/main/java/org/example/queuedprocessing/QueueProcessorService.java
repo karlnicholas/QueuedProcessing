@@ -12,16 +12,16 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class QueueProcessorService {
-
     private final SubmitToQueueService submitToQueueService;
+    private final ResultProcessor resultProcessor;
     private volatile boolean running = true;
-    private static final int BATCH_SIZE = 4; // Number of messages to process at once
+    private static final int BATCH_SIZE = 4;
 
     @Autowired
-    public QueueProcessorService(SubmitToQueueService submitToQueueService) {
+    public QueueProcessorService(SubmitToQueueService submitToQueueService, ResultProcessor resultProcessor) {
         this.submitToQueueService = submitToQueueService;
+        this.resultProcessor = resultProcessor;
     }
-
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         new Thread(this::processItems).start();
@@ -50,14 +50,13 @@ public class QueueProcessorService {
     }
 
     String processItem(List<ProcessingRequest> requests) {
-        // Simulate processing all requests
         for (ProcessingRequest request : requests) {
             String result = "Processed: " + request.getData();
-            request.getFuture().complete(result); // Notify the async method that processing is complete
+            request.getFuture().complete(result);
+            resultProcessor.processResult(request.getFuture());
         }
         return "Batch of " + requests.size() + " requests processed";
     }
-
     @EventListener(ContextClosedEvent.class)
     public void onApplicationShutdown() {
         running = false; // Set running to false to stop the loop
